@@ -1,16 +1,30 @@
 package main
 
 import (
+	"io"
 	"fmt"
 	"net"
 )
 
 func handleRequest(conn net.Conn) {
-    defer conn.Close()
 	// Handle incoming request
     // For simplicity, just send a byte slice back to the client
-    data := []byte("Hello, peer!")
-    conn.Write(data)
+    for{
+		buf := make([]byte, 1024)
+		_, err := conn.Read(buf)
+		if err != nil{
+			if err == io.EOF{
+				fmt.Println("EOF")
+			}else{
+				fmt.Println("error reading from conn: ", err)
+			}
+			if conn != nil{
+				conn.Close()
+			}
+			return
+		}
+		fmt.Printf("data read from conn: %s:\n", string(buf))
+	}
 }
 
 
