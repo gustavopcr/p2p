@@ -4,24 +4,49 @@ import (
 	"io"
 	"fmt"
 	"net"
+	"bufio"
+	"os"
+	_"strings"
 )
 
-func handleRequest(conn net.Conn) {
-	// Handle incoming request
-    // For simplicity, just send a byte slice back to the client
+func handleRequest(rw *bufio.ReadWriter) {
     for{
-		buf := make([]byte, 1024)
-		_, err := conn.Read(buf)
+		buf := make([]byte, 256)
+		n, err := rw.Read(buf)
 		if err != nil{
 			if err == io.EOF{
 				fmt.Println("EOF")
 			}else{
 				fmt.Println("error reading from conn: ", err)
 			}
-			if conn != nil{
-				conn.Close()
-			}
 			return
+		}
+		file, err := os.Open(string(buf[:n]))
+		if err != nil {
+			fmt.Println("err file: ", err)
+			return
+		}
+		defer file.Close()
+		bufio := bufio.NewReader(file)	
+		for{
+			tmp := make([]byte, 256)
+			n, err := bufio.Read(tmp)
+			if n >0{
+				_, err :=rw.Write(tmp[:n])
+				if err != nil{
+					fmt.Println("error writing to conn: ", err)
+					return
+				}
+				rw.Flush()
+			}
+			if err != nil{
+				if err == io.EOF{
+					fmt.Println("EOF")
+				}else{
+					fmt.Println("error reading from conn: ", err)
+				}
+				return
+			}
 		}
 		fmt.Printf("data read from conn: %s:\n", string(buf))
 	}
@@ -40,8 +65,9 @@ func startServer() {
 		if err != nil {
 			fmt.Println("error")
 		}
-		fmt.Println("go handleRequest(conn)")
-		go handleRequest(conn)
+		defer conn.Close()
+		bufio := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
+		go handleRequest(bufio)
 	}
 }
 
