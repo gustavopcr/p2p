@@ -1,57 +1,58 @@
 package main
 
 import (
-	"io"
-	"fmt"
-	"net"
 	"bufio"
+	"fmt"
+	"io"
+	"net"
 	"os"
-	_"strings"
+	_ "time"
 )
 
 func handleRequest(rw *bufio.ReadWriter) {
-    for{
+	for {
 		buf := make([]byte, 256)
 		n, err := rw.Read(buf)
-		if err != nil{
-			if err == io.EOF{
+		if err != nil {
+			if err == io.EOF {
 				fmt.Println("EOF")
-			}else{
+			} else {
 				fmt.Println("error reading from conn: ", err)
 			}
 			return
 		}
+		fmt.Printf("data read from conn: %s:\n", string(buf))
+		
 		file, err := os.Open(string(buf[:n]))
 		if err != nil {
 			fmt.Println("err file: ", err)
 			return
 		}
 		defer file.Close()
-		bufio := bufio.NewReader(file)	
-		for{
+		bufio := bufio.NewReader(file)
+		
+		for {
 			tmp := make([]byte, 256)
 			n, err := bufio.Read(tmp)
-			if n >0{
-				_, err :=rw.Write(tmp[:n])
-				if err != nil{
+			if err != nil {
+				if err == io.EOF {
+					fmt.Println("EOF")
+				} else {
+					fmt.Println("error reading from conn: ", err)
+				}
+				return
+			}
+			if n > 0 {
+				_, err := rw.Write(tmp[:n])
+				if err != nil {
 					fmt.Println("error writing to conn: ", err)
 					return
 				}
 				rw.Flush()
 			}
-			if err != nil{
-				if err == io.EOF{
-					fmt.Println("EOF")
-				}else{
-					fmt.Println("error reading from conn: ", err)
-				}
-				return
-			}
 		}
-		fmt.Printf("data read from conn: %s:\n", string(buf))
 	}
 }
-
 
 func startServer() {
 	l, err := net.Listen("tcp", ":6060")
@@ -65,16 +66,38 @@ func startServer() {
 		if err != nil {
 			fmt.Println("error")
 		}
-		defer conn.Close()
-		bufio := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
-		go handleRequest(bufio)
+		go func(conn net.Conn){
+			defer conn.Close()
+			bufio := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
+			handleRequest(bufio)
+		}(conn)
 	}
 }
+
+func connectToServer(ip, port, filename string) (net.Conn, error) {
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", ip, port))
+	if err != nil {
+		fmt.Println("err: ", err)
+		return nil, err
+	}
+	conn.Write([]byte(filename))
+	return conn, nil
+}
+
 
 func main() {
 	go startServer()
 	fmt.Println("p2p running...")
-	for{
-		
+	for {
+		/*
+		conn, err := connectToServer("172.25.30.133", "6060", "HorasExtras.pdf")
+		if err != nil {
+			fmt.Println("error: ", err)
+			conn.Close()
+			continue
+		}
+		conn.Close()
+		time.Sleep(3 * time.Second)
+		*/
 	}
 }
