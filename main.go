@@ -96,8 +96,18 @@ func main() {
 			conn.Close()
 			continue
 		}
+		for {
+			tmp := make([]byte, 256)
+			n, _ := conn.Read(tmp)
+			if n > 0 {
+				fmt.Println("tmp: ", string(tmp))
+			} else {
+				break
+			}
+		}
 		conn.Close()
 		time.Sleep(3 * time.Second)
-		*/
 	}
+	*/
 }
+
