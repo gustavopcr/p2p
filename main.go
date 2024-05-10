@@ -107,7 +107,7 @@ func main() {
 		}
 		conn.Close()
 		time.Sleep(3 * time.Second)
-	}
 	*/
+	}
 }
 
