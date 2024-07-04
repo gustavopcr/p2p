@@ -14,8 +14,16 @@ func main() {
 	go server.StartServer()	
 	fmt.Println("p2p running...")
 	
+	//json := "{ \"teste\": \"alo\"}"
+
+	_, err := http.Post("http://localhost:8080/peer", "application/json", nil)
+	
+	if err != nil{
+		panic(err)
+	}
+
 	for {
-		r, err := http.Get("http://localhost:8080/peers")
+		r, err := http.Get("http://localhost:8080/peer")
 		if err != nil{
 			panic(err)
 		}
