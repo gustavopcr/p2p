@@ -8,22 +8,23 @@ import (
 )
 
 func main() {
-	serverAddr, err := net.ResolveUDPAddr("udp", ":8080") // Public IP of the rendezvous server
+	serverAddr, err := net.ResolveUDPAddr("udp", "localhost:8080") // Public IP of the rendezvous server
 	if err != nil {
 		fmt.Println("Error resolving address:", err)
 		return
 	}
 
-	nexusConn, err := net.DialUDP("udp", nil, serverAddr)
+	// Use a single connection for both server and peer communication
+	nexusConn, err := net.ListenUDP("udp", nil)
 	if err != nil {
-		fmt.Println("Error dialing UDP connection:", err)
+		fmt.Println("Error creating UDP connection:", err)
 		return
 	}
 	defer nexusConn.Close()
 
 	// Send a connection request to the server
 	message := []byte("Connect me")
-	_, err = nexusConn.Write(message)
+	_, err = nexusConn.WriteToUDP(message, serverAddr)
 	if err != nil {
 		fmt.Println("Error sending message:", err)
 		return
@@ -33,8 +34,8 @@ func main() {
 
 	// Receive peer information from the server
 	buffer := make([]byte, 1024)
-	nexusConn.SetReadDeadline(time.Now().Add(10 * time.Second)) // Set a deadline for reading
-	n, err := nexusConn.Read(buffer)
+	//nexusConn.SetReadDeadline(time.Now().Add(10 * time.Second)) // Set a deadline for reading
+	n, _, err := nexusConn.ReadFromUDP(buffer)
 	if err != nil {
 		fmt.Println("Error receiving peer info:", err)
 		return
@@ -50,27 +51,13 @@ func main() {
 		return
 	}
 
-	// Use the same local port for sending and receiving
-	localAddr, err := net.ResolveUDPAddr("udp", ":0")
-	if err != nil {
-		fmt.Println("Error resolving local address:", err)
-		return
-	}
-
-	connPeer, err := net.ListenUDP("udp", localAddr)
-	if err != nil {
-		fmt.Println("Error listening on UDP port:", err)
-		return
-	}
-	defer connPeer.Close()
-
-	fmt.Printf("Local address: %s\n", connPeer.LocalAddr().String())
+	fmt.Printf("Local address: %s\n", nexusConn.LocalAddr().String())
 
 	// Start sending packets to the peer using WriteToUDP
 	go func() {
 		for {
 			fmt.Println("Sending data to peer...")
-			_, err := connPeer.WriteToUDP([]byte("Hello Peer!"), peerAddr)
+			_, err := nexusConn.WriteToUDP([]byte("Hello Peer!"), peerAddr)
 			if err != nil {
 				fmt.Println("Error sending packet to peer:", err)
 			} else {
@@ -83,7 +70,7 @@ func main() {
 	// Listen for incoming packets from the peer
 	for {
 		fmt.Println("Waiting to read data from peer...")
-		n, addr, err := connPeer.ReadFromUDP(buffer)
+		n, addr, err := nexusConn.ReadFromUDP(buffer)
 		if err != nil {
 			fmt.Println("Error reading from UDP connection:", err)
 			continue
