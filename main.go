@@ -2,35 +2,45 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-	"github.com/gustavopcr/p2p/internal/server"
-	"github.com/gustavopcr/p2p/types"
+	"net"
 	"time"
-	"encoding/json"
 )
 
 func main() {
-	var peers = make([]types.Peer, 0)
-	go server.StartServer()	
-	fmt.Println("p2p running...")
-	
-	//json := "{ \"teste\": \"alo\"}"
-
-	_, err := http.Post("http://localhost:8080/peer", "application/json", nil)
-	
-	if err != nil{
-		panic(err)
+	// Create the address to send to
+	serverAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:8080")
+	if err != nil {
+		fmt.Println("Error resolving address:", err)
+		return
 	}
 
-	for {
-		r, err := http.Get("http://localhost:8080/peer")
-		if err != nil{
-			panic(err)
-		}
-		err = json.NewDecoder(r.Body).Decode(&peers)
-		fmt.Println(peers)
-		time.Sleep(30 * time.Second)
+	// Create a UDP connection
+	conn, err := net.DialUDP("udp", nil, serverAddr)
+	if err != nil {
+		fmt.Println("Error dialing UDP connection:", err)
+		return
 	}
-	
+	defer conn.Close()
+
+	// Message to send
+	message := []byte("Hello, UDP Server!")
+
+	// Send the message to the server
+	_, err = conn.Write(message)
+	if err != nil {
+		fmt.Println("Error sending message:", err)
+		return
+	}
+
+	fmt.Println("Message sent to UDP server:", string(message))
+
+	// Optional: wait for a response
+	buffer := make([]byte, 1024)
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second)) // Set a deadline for reading
+	n, err := conn.Read(buffer)
+	if err != nil {
+		fmt.Println("No response from server or error reading response:", err)
+	} else {
+		fmt.Printf("Response from server: %s\n", string(buffer[:n]))
+	}
 }
-
