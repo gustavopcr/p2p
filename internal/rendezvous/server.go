@@ -1,6 +1,6 @@
-package server
+package rendezvous
 
-import(
+import (
 	"bufio"
 	"fmt"
 	"io"
@@ -21,7 +21,7 @@ func handleRequest(rw *bufio.ReadWriter) {
 			return
 		}
 		fmt.Printf("data read from conn: %s\n", string(buf))
-		
+
 		file, err := os.Open(string(buf[:n]))
 		if err != nil {
 			fmt.Println("err file: ", err)
@@ -29,7 +29,7 @@ func handleRequest(rw *bufio.ReadWriter) {
 		}
 		defer file.Close()
 		bufio := bufio.NewReader(file)
-		
+
 		for {
 			tmp := make([]byte, 256)
 			n, err := bufio.Read(tmp)
@@ -65,7 +65,7 @@ func StartServer() {
 		if err != nil {
 			fmt.Println("error")
 		}
-		go func(conn net.Conn){
+		go func(conn net.Conn) {
 			defer conn.Close()
 			bufio := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 			handleRequest(bufio)
