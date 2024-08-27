@@ -1,8 +1,6 @@
 package main
 
-import (
-	"github.com/gustavopcr/p2p/internal/rendezvous"
-)
+import "github.com/gustavopcr/p2p/internal/rendezvous"
 
 func main() {
 	rendezvous.ConnectToPeers("localhost:8080")
