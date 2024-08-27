@@ -4,35 +4,14 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
-	"strings"
 	"time"
+
+	"github.com/gustavopcr/p2p/peer"
 )
 
-type peer struct {
-	conn      *net.UDPConn
-	nexusAddr *net.UDPAddr
-	peersAddr []*net.UDPAddr
-	buffer    []byte
-}
-
-func newPeer(server string) (*peer, error) {
-	serverAddr, err := net.ResolveUDPAddr("udp", server) // Public IP of the rendezvous server
-	if err != nil {
-		fmt.Println("Error resolving address:", err)
-		return nil, err
-	}
-	// Use a single connection for both server and peer communication
-	nexusConn, err := net.ListenUDP("udp", nil)
-	if err != nil {
-		fmt.Println("Error creating UDP connection:", err)
-		return nil, err
-	}
-	return &peer{conn: nexusConn, nexusAddr: serverAddr, peersAddr: make([]*net.UDPAddr, 0), buffer: make([]byte, 1024)}, nil
-}
-
-func (p *peer) requestRendezvous() error {
+func requestRendezvous(p *peer.Peer) error {
 	message := []byte("Connect me")
-	_, err := p.conn.WriteToUDP(message, p.nexusAddr)
+	_, err := p.SendData(message, p.NexusAddr)
 	if err != nil {
 		fmt.Println("Error sending message:", err)
 		return err
@@ -41,40 +20,36 @@ func (p *peer) requestRendezvous() error {
 	return nil
 }
 
-func (p *peer) listenPeer() error {
+func addPeer(p *peer.Peer) error {
 	//nexusConn.SetReadDeadline(time.Now().Add(10 * time.Second)) // Set a deadline for reading
-	n, _, err := p.conn.ReadFromUDP(p.buffer)
+	n, _, err := p.ReadData()
 	if err != nil {
 		fmt.Println("Error receiving peer info:", err)
 		return err
 	}
-
-	peerAddrStr := string(p.buffer[:n])
-	fmt.Println("Received peer info:", peerAddrStr)
-
-	peerAddrStr = strings.TrimPrefix(peerAddrStr, "Peer: ")
+	peerAddrStr := string(p.Buffer[:n])
 	peerAddr, err := net.ResolveUDPAddr("udp", peerAddrStr)
 	if err != nil {
 		fmt.Println("Error resolving peer address:", err)
 		return err
 	}
 
-	p.peersAddr = append(p.peersAddr, peerAddr)
+	p.PeersAddr = append(p.PeersAddr, peerAddr)
 	return nil
 }
 
 func ConnectToPeers(server string) { //substituir server
-	p, err := newPeer(server)
+	p, err := peer.NewPeer(server)
 	if err != nil {
 		panic(err)
 	}
-	//err := requestRendezvous(server)
-	err = p.requestRendezvous()
+
+	err = requestRendezvous(p)
 	if err != nil {
 		panic(err)
 	}
 	// Receive peer information from the server
-	err = p.listenPeer()
+	err = addPeer(p)
 	if err != nil {
 		panic(err)
 	}
@@ -83,8 +58,8 @@ func ConnectToPeers(server string) { //substituir server
 	go func() {
 		for {
 			fmt.Println("Sending data to peer...")
-			for _, peerAddr := range p.peersAddr {
-				_, err := p.conn.WriteToUDP([]byte(fmt.Sprintf("Hello Peer!: %d", rand.Int())), peerAddr)
+			for _, peerAddr := range p.PeersAddr {
+				_, err := p.SendData([]byte(fmt.Sprintf("Hello Peer!: %d", rand.Int())), peerAddr)
 				if err != nil {
 					fmt.Println("Error sending packet to peer:", err)
 				} else {
@@ -98,12 +73,12 @@ func ConnectToPeers(server string) { //substituir server
 	// Listen for incoming packets from the peer
 	for {
 		fmt.Println("Waiting to read data from peer...")
-		n, addr, err := p.conn.ReadFromUDP(p.buffer)
+		n, addr, err := p.ReadData()
 		if err != nil {
 			fmt.Println("Error reading from UDP connection:", err)
 			continue
 		}
 
-		fmt.Printf("Received message from %s: %s\n", addr, string(p.buffer[:n]))
+		fmt.Printf("Received message from %s: %s\n", addr, string(p.Buffer[:n]))
 	}
 }
