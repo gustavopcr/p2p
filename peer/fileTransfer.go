@@ -2,11 +2,12 @@ package peer
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 )
 
-func (p *Peer) SendFile(filename string) {
+func (p *Peer) UploadFile(filename string) {
 	fi, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -28,5 +29,14 @@ func (p *Peer) SendFile(filename string) {
 		for _, peer := range p.PeersAddr {
 			p.SendData(p.Buffer[:n], peer)
 		}
+	}
+}
+
+func (p *Peer) DownloadFile() {
+	for n, addr, err := p.ReadData(); n >= 0; n, addr, err = p.ReadData() {
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("reading: ", p.Buffer, " from: ", addr)
 	}
 }
