@@ -33,7 +33,6 @@ func (p *Peer) SendData(data []byte, PeerAddr *net.UDPAddr) (int, error) {
 		fmt.Println("Error sending message:", err)
 		return 0, err
 	}
-	fmt.Println("Connection request sent to server")
 	return n, nil
 }
 
