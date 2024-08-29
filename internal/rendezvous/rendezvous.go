@@ -58,14 +58,10 @@ func ConnectToPeers(server string) { //substituir server
 		}
 	}()
 
-	go func() {
-		for {
-			p.DownloadFile()
-		}
-	}()
 	for {
-
+		p.DownloadFile()
 	}
+
 	// Start sending packets to the peer using WriteToUDP
 	/*
 		go func() {
