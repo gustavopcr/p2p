@@ -6,7 +6,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 )
@@ -15,17 +14,6 @@ type Message struct {
 	MessageType    int
 	SequenceNumber int
 	Payload        []byte
-}
-
-func listenForMessages(conn *net.UDPConn, receiveChannel chan<- []byte) {
-	buffer := make([]byte, 1024)
-	for {
-		_, _, err := conn.ReadFromUDP(buffer)
-		if err != nil {
-			log.Println("Error reading from UDP: ", err)
-		}
-		receiveChannel <- buffer
-	}
 }
 
 func sendMessages(conn *net.UDPConn, peerAddr *net.UDPAddr, sendChannel <-chan []byte) error {
@@ -38,12 +26,6 @@ func sendMessages(conn *net.UDPConn, peerAddr *net.UDPAddr, sendChannel <-chan [
 		}
 	}
 	return nil
-}
-
-func handleMessages(messageChannel <-chan []Message) {
-	for msg := range messageChannel {
-		fmt.Println("msg: ", msg)
-	}
 }
 
 func (p *Peer) UploadFile(filename string) {
@@ -90,26 +72,29 @@ func (p *Peer) UploadFile(filename string) {
 	}
 }
 
-func (p *Peer) DownloadFile(receiveChannel <-chan []byte) {
-	tmpBuffer := make([]byte, 1024)
+func (p *Peer) DownloadFile(messageChannel chan<- Message) {
+	var buffer bytes.Buffer
+	var msg Message
+	decoder := gob.NewDecoder(&buffer)
+	tmpBuffer := make([]byte, 2048)
 	for {
-		n, addr, err := p.ReadData(tmpBuffer)
+		n, _, err := p.ReadData(tmpBuffer)
+		fmt.Println("tmpBuffer: ", tmpBuffer)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("reading: ", string(tmpBuffer[:n]), " from: ", addr)
-
-	}
-}
-
-/*
-func (p *Peer) DownloadFile() {
-	tmpBuffer := make([]byte, 1024)
-	for n, addr, err := p.ReadData(tmpBuffer); n >= 0; n, addr, err = p.ReadData(tmpBuffer) {
+		buffer.Write(tmpBuffer[:n])
+		err = decoder.Decode(&msg)
+		buffer.Reset()
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("reading: ", tmpBuffer, " from: ", addr)
+		messageChannel <- msg
 	}
 }
-*/
+
+func HandleMessage(messageChannel <-chan Message) {
+	for msg := range messageChannel {
+		fmt.Println("msg: ", msg)
+	}
+}

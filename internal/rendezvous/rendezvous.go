@@ -54,33 +54,4 @@ func ConnectToPeers(server string) *peer.Peer { //substituir server
 	}
 
 	return p
-	// Start sending packets to the peer using WriteToUDP
-	/*
-		go func() {
-			for {
-				fmt.Println("Sending data to peer...")
-				for _, peerAddr := range p.PeersAddr {
-					_, err := p.SendData([]byte(fmt.Sprintf("Hello Peer!: %d", rand.Int())), peerAddr)
-
-					if err != nil {
-						fmt.Println("Error sending packet to peer:", err)
-					} else {
-						fmt.Println("Packet sent to peer.")
-					}
-					time.Sleep(3 * time.Second)
-				}
-			}
-		}()
-		// Listen for incoming packets from the peer
-		for {
-			fmt.Println("Waiting to read data from peer...")
-			n, addr, err := p.ReadData()
-			if err != nil {
-				fmt.Println("Error reading from UDP connection:", err)
-				continue
-			}
-
-			fmt.Printf("Received message from %s: %s\n", addr, string(p.Buffer[:n]))
-		}
-	*/
 }
