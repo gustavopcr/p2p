@@ -47,8 +47,8 @@ func handleMessages(messageChannel <-chan []Message) {
 }
 
 func (p *Peer) UploadFile(filename string) {
-
 	sendChannel := make(chan []byte)
+	defer close(sendChannel)
 	for _, peerAddr := range p.PeersAddr {
 		go sendMessages(p.conn, peerAddr, sendChannel)
 	}
@@ -60,21 +60,15 @@ func (p *Peer) UploadFile(filename string) {
 	if err != nil {
 		panic(err)
 	}
-	/*
-		fi, err := f.Stat()
-		if err != nil {
-			panic(err)
-		}
-		fileSize := fi.Size()
-		_ = fileSize / int64(len(p.Buffer))
-	*/
-	r := bufio.NewReader(f)
 
+	r := bufio.NewReader(f)
+	tmpBuffer := make([]byte, 1024)
 	for { // lendo arquivo
-		n, err := r.Read(buffer.Bytes())
+		n, err := r.Read(tmpBuffer)
 		if err != nil {
 			if err == io.EOF {
-				message := Message{MessageType: 1, SequenceNumber: 0, Payload: p.Buffer[:n]}
+				message := Message{MessageType: 1, SequenceNumber: 0, Payload: tmpBuffer[:n]}
+				buffer.Reset()
 				err = encoder.Encode(message)
 				if err != nil {
 					fmt.Println("Error encoding struct:", err)
@@ -85,8 +79,8 @@ func (p *Peer) UploadFile(filename string) {
 			}
 			panic(err) // Handle other potential errors
 		}
-
-		message := Message{MessageType: 0, SequenceNumber: 1, Payload: p.Buffer[:n]}
+		message := Message{MessageType: 0, SequenceNumber: 1, Payload: tmpBuffer[:n]}
+		buffer.Reset()
 		err = encoder.Encode(message)
 		if err != nil {
 			fmt.Println("Error encoding struct:", err)
