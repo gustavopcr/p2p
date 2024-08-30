@@ -53,9 +53,7 @@ func ConnectToPeers(server string) { //substituir server
 	}
 
 	go func() {
-		for {
-			p.UploadFile("alo.txt")
-		}
+		p.UploadFile("alo.txt")
 	}()
 
 	for {
