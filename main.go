@@ -1,9 +1,21 @@
 package main
 
-import "github.com/gustavopcr/p2p/internal/rendezvous"
+import (
+	"github.com/gustavopcr/p2p/internal/rendezvous"
+)
 
 func main() {
-	rendezvous.ConnectToPeers("localhost:8080")
+	p := rendezvous.ConnectToPeers("localhost:8080")
+	receiveChannel := make(chan []byte)
+
+	go func() {
+		p.UploadFile("alo.txt")
+	}()
+
+	for {
+		p.DownloadFile(receiveChannel)
+	}
+
 	/*
 		subscribeToServer(ip)
 

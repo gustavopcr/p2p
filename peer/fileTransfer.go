@@ -90,11 +90,26 @@ func (p *Peer) UploadFile(filename string) {
 	}
 }
 
-func (p *Peer) DownloadFile() {
-	for n, addr, err := p.ReadData(); n >= 0; n, addr, err = p.ReadData() {
+func (p *Peer) DownloadFile(receiveChannel <-chan []byte) {
+	tmpBuffer := make([]byte, 1024)
+	for {
+		n, addr, err := p.ReadData(tmpBuffer)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("reading: ", p.Buffer, " from: ", addr)
+		fmt.Println("reading: ", string(tmpBuffer[:n]), " from: ", addr)
+
 	}
 }
+
+/*
+func (p *Peer) DownloadFile() {
+	tmpBuffer := make([]byte, 1024)
+	for n, addr, err := p.ReadData(tmpBuffer); n >= 0; n, addr, err = p.ReadData(tmpBuffer) {
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("reading: ", tmpBuffer, " from: ", addr)
+	}
+}
+*/

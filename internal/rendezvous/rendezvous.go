@@ -20,12 +20,13 @@ func requestRendezvous(p *peer.Peer) error {
 
 func addPeer(p *peer.Peer) error {
 	//nexusConn.SetReadDeadline(time.Now().Add(10 * time.Second)) // Set a deadline for reading
-	n, _, err := p.ReadData()
+	tmpBuffer := make([]byte, 1024)
+	n, _, err := p.ReadData(tmpBuffer)
 	if err != nil {
 		fmt.Println("Error receiving peer info:", err)
 		return err
 	}
-	peerAddrStr := string(p.Buffer[:n])
+	peerAddrStr := string(tmpBuffer[:n])
 	peerAddr, err := net.ResolveUDPAddr("udp", peerAddrStr)
 	if err != nil {
 		fmt.Println("Error resolving peer address:", err)
@@ -36,7 +37,7 @@ func addPeer(p *peer.Peer) error {
 	return nil
 }
 
-func ConnectToPeers(server string) { //substituir server
+func ConnectToPeers(server string) *peer.Peer { //substituir server
 	p, err := peer.NewPeer(server)
 	if err != nil {
 		panic(err)
@@ -52,14 +53,7 @@ func ConnectToPeers(server string) { //substituir server
 		panic(err)
 	}
 
-	go func() {
-		p.UploadFile("alo.txt")
-	}()
-
-	for {
-		p.DownloadFile()
-	}
-
+	return p
 	// Start sending packets to the peer using WriteToUDP
 	/*
 		go func() {
