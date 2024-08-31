@@ -35,9 +35,6 @@ func (p *Peer) UploadFile(filename string) {
 		go sendMessages(p.conn, peerAddr, sendChannel)
 	}
 
-	var buffer bytes.Buffer
-	encoder := gob.NewEncoder(&buffer)
-
 	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -46,11 +43,14 @@ func (p *Peer) UploadFile(filename string) {
 	r := bufio.NewReader(f)
 	tmpBuffer := make([]byte, 1024)
 	for { // lendo arquivo
+		var buffer bytes.Buffer
+		encoder := gob.NewEncoder(&buffer)
+
 		n, err := r.Read(tmpBuffer)
 		if err != nil {
 			if err == io.EOF {
 				message := Message{MessageType: 1, SequenceNumber: 0, Payload: tmpBuffer[:n]}
-				buffer.Reset()
+
 				err = encoder.Encode(message)
 				if err != nil {
 					fmt.Println("Error encoding struct:", err)
@@ -62,7 +62,6 @@ func (p *Peer) UploadFile(filename string) {
 			panic(err) // Handle other potential errors
 		}
 		message := Message{MessageType: 0, SequenceNumber: 1, Payload: tmpBuffer[:n]}
-		buffer.Reset()
 		err = encoder.Encode(message)
 		if err != nil {
 			fmt.Println("Error encoding struct:", err)
@@ -73,11 +72,12 @@ func (p *Peer) UploadFile(filename string) {
 }
 
 func (p *Peer) DownloadFile(messageChannel chan<- Message) {
-	var buffer bytes.Buffer
 	var msg Message
-	decoder := gob.NewDecoder(&buffer)
 	tmpBuffer := make([]byte, 2048)
 	for {
+		var buffer bytes.Buffer
+		decoder := gob.NewDecoder(&buffer)
+
 		n, _, err := p.ReadData(tmpBuffer)
 		fmt.Println("tmpBuffer: ", tmpBuffer)
 		if err != nil {
@@ -85,8 +85,8 @@ func (p *Peer) DownloadFile(messageChannel chan<- Message) {
 		}
 		buffer.Write(tmpBuffer[:n])
 		err = decoder.Decode(&msg)
-		buffer.Reset()
 		if err != nil {
+			fmt.Println("err: ", err)
 			panic(err)
 		}
 		messageChannel <- msg

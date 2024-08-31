@@ -13,9 +13,9 @@ func main() {
 
 	//go peer.HandleMessage(messageChannel)
 
-	for {
-		p.DownloadFile(messageChannel)
-	}
+	
+	p.DownloadFile(messageChannel)
+	
 
 	/*
 		subscribeToServer(ip)
