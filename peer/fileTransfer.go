@@ -27,6 +27,12 @@ func (p *Peer) SendMessages(sendChannel <-chan []byte) {
 	}
 }
 
+func (p *Peer) HandleMessages(messageChannel <-chan Message) {
+	for msg := range messageChannel {
+		fmt.Println("msg.Payload: ", string(msg.Payload))
+	}
+}
+
 func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 	f, err := os.Open(filename)
 	if err != nil {
