@@ -58,10 +58,19 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 	for { // lendo arquivo
 		var buffer bytes.Buffer
 		encoder := gob.NewEncoder(&buffer)
+<<<<<<< HEAD
 		n, err := r.Read(tmpBuffer)
 		if err != nil {
 			if err == io.EOF {
 				message := Message{FileID: fileId, MessageType: 1, SequenceNumber: 0, Offset: offset, Payload: tmpBuffer[:n]}
+=======
+
+		n, err := r.Read(tmpBuffer)
+		if err != nil {
+			if err == io.EOF {
+				message := Message{MessageType: 1, SequenceNumber: 0, Payload: tmpBuffer[:n]}
+
+>>>>>>> 84b4dd4ac639d75e116535b1137cc424f0baa688
 				err = encoder.Encode(message)
 				if err != nil {
 					fmt.Println("Error encoding struct:", err)
@@ -73,7 +82,11 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 			}
 			panic(err)
 		}
+<<<<<<< HEAD
 		message := Message{FileID: fileId, MessageType: 1, SequenceNumber: 0, Offset: offset, Payload: tmpBuffer[:n]}
+=======
+		message := Message{MessageType: 0, SequenceNumber: 1, Payload: tmpBuffer[:n]}
+>>>>>>> 84b4dd4ac639d75e116535b1137cc424f0baa688
 		err = encoder.Encode(message)
 		if err != nil {
 			fmt.Println("Error encoding struct:", err)
@@ -85,10 +98,19 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 }
 
 func (p *Peer) DownloadFile(messageChannel chan<- Message) {
+<<<<<<< HEAD
 	tmpBuffer := make([]byte, 1024)
 	for {
 		var buffer bytes.Buffer
 		decoder := gob.NewDecoder(&buffer)
+=======
+	var msg Message
+	tmpBuffer := make([]byte, 2048)
+	for {
+		var buffer bytes.Buffer
+		decoder := gob.NewDecoder(&buffer)
+
+>>>>>>> 84b4dd4ac639d75e116535b1137cc424f0baa688
 		n, _, err := p.ReadData(tmpBuffer)
 		if err != nil {
 			panic(err)
@@ -97,6 +119,7 @@ func (p *Peer) DownloadFile(messageChannel chan<- Message) {
 		var msg Message
 		err = decoder.Decode(&msg)
 		if err != nil {
+			fmt.Println("err: ", err)
 			panic(err)
 		}
 		messageChannel <- msg
