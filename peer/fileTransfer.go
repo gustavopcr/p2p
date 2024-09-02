@@ -15,7 +15,7 @@ type Message struct {
 	FileID         uuid.UUID
 	MessageType    int
 	SequenceNumber int
-	Offset         int
+	Offset         int64
 	Payload        []byte
 }
 
@@ -48,22 +48,13 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 	tmpBuffer := make([]byte, 1024)
 
 	fileId := uuid.New()
-	offset := 0
+	offset := int64(0)
 	for { // lendo arquivo
 		var buffer bytes.Buffer
 		encoder := gob.NewEncoder(&buffer)
 		n, err := r.Read(tmpBuffer)
 		if err != nil {
 			if err == io.EOF {
-				/*
-					type Message struct {
-						MessageType    int
-						SequenceNumber int
-						Offset         uint64
-						FileID         uuid.UUID
-						Payload        []byte
-					}
-				*/
 				message := Message{FileID: fileId, MessageType: 1, SequenceNumber: 0, Offset: offset, Payload: tmpBuffer[:n]}
 				err = encoder.Encode(message)
 				if err != nil {
@@ -71,6 +62,7 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 					panic(err)
 				}
 				sendChannel <- buffer.Bytes()
+				offset += int64(n + 1)
 				break
 			}
 			panic(err)
@@ -82,8 +74,8 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 			return
 		}
 		sendChannel <- buffer.Bytes()
+		offset += int64(n + 1)
 	}
-
 }
 
 func (p *Peer) DownloadFile(messageChannel chan<- Message) {
