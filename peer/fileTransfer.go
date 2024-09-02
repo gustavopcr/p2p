@@ -6,7 +6,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"net"
 	"os"
 )
 
@@ -16,25 +15,19 @@ type Message struct {
 	Payload        []byte
 }
 
-func sendMessages(conn *net.UDPConn, peerAddr *net.UDPAddr, sendChannel <-chan []byte) error {
+func (p *Peer) SendMessages(sendChannel <-chan []byte) {
 	for data := range sendChannel {
-		_, err := conn.WriteToUDP(data, peerAddr)
-
-		if err != nil {
-			fmt.Println("Error sending message:", err)
-			return err
+		for _, peerAddr := range p.PeersAddr {
+			_, err := p.Conn.WriteToUDP(data, peerAddr)
+			if err != nil {
+				fmt.Println("Error sending message:", err)
+				panic(err)
+			}
 		}
 	}
-	return nil
 }
 
-func (p *Peer) UploadFile(filename string) {
-	sendChannel := make(chan []byte)
-	defer close(sendChannel)
-	for _, peerAddr := range p.PeersAddr {
-		go sendMessages(p.conn, peerAddr, sendChannel)
-	}
-
+func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
 
@@ -42,6 +35,7 @@ func (p *Peer) UploadFile(filename string) {
 	if err != nil {
 		panic(err)
 	}
+	defer f.Close()
 
 	r := bufio.NewReader(f)
 	tmpBuffer := make([]byte, 1024)
@@ -50,51 +44,39 @@ func (p *Peer) UploadFile(filename string) {
 		if err != nil {
 			if err == io.EOF {
 				message := Message{MessageType: 1, SequenceNumber: 0, Payload: tmpBuffer[:n]}
-				buffer.Reset()
 				err = encoder.Encode(message)
 				if err != nil {
 					fmt.Println("Error encoding struct:", err)
-					return
+					panic(err)
 				}
 				sendChannel <- buffer.Bytes()
+				buffer.Reset()
 				break
 			}
-			panic(err) // Handle other potential errors
+			panic(err)
 		}
 		message := Message{MessageType: 0, SequenceNumber: 1, Payload: tmpBuffer[:n]}
-		buffer.Reset()
 		err = encoder.Encode(message)
 		if err != nil {
 			fmt.Println("Error encoding struct:", err)
 			return
 		}
 		sendChannel <- buffer.Bytes()
+		buffer.Reset()
 	}
+
 }
 
-func (p *Peer) DownloadFile(messageChannel chan<- Message) {
+func (p *Peer) DownloadFile(receiveChannel chan<- []byte) {
 	var buffer bytes.Buffer
-	var msg Message
-	decoder := gob.NewDecoder(&buffer)
-	tmpBuffer := make([]byte, 2048)
+	tmpBuffer := make([]byte, 1024)
 	for {
 		n, _, err := p.ReadData(tmpBuffer)
-		fmt.Println("tmpBuffer: ", tmpBuffer)
 		if err != nil {
 			panic(err)
 		}
 		buffer.Write(tmpBuffer[:n])
-		err = decoder.Decode(&msg)
+		receiveChannel <- buffer.Bytes()
 		buffer.Reset()
-		if err != nil {
-			panic(err)
-		}
-		messageChannel <- msg
-	}
-}
-
-func HandleMessage(messageChannel <-chan Message) {
-	for msg := range messageChannel {
-		fmt.Println("msg: ", msg)
 	}
 }

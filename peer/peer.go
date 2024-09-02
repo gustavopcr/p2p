@@ -6,7 +6,7 @@ import (
 )
 
 type Peer struct {
-	conn      *net.UDPConn
+	Conn      *net.UDPConn
 	NexusAddr *net.UDPAddr
 	PeersAddr []*net.UDPAddr
 }
@@ -23,11 +23,11 @@ func NewPeer(server string) (*Peer, error) {
 		fmt.Println("Error creating UDP connection:", err)
 		return nil, err
 	}
-	return &Peer{conn: nexusConn, NexusAddr: serverAddr, PeersAddr: make([]*net.UDPAddr, 0)}, nil
+	return &Peer{Conn: nexusConn, NexusAddr: serverAddr, PeersAddr: make([]*net.UDPAddr, 0)}, nil
 }
 
 func (p *Peer) SendData(data []byte, PeerAddr *net.UDPAddr) (int, error) {
-	n, err := p.conn.WriteToUDP(data, PeerAddr)
+	n, err := p.Conn.WriteToUDP(data, PeerAddr)
 	if err != nil {
 		fmt.Println("Error sending message:", err)
 		return 0, err
@@ -37,7 +37,7 @@ func (p *Peer) SendData(data []byte, PeerAddr *net.UDPAddr) (int, error) {
 
 func (p *Peer) ReadData(buffer []byte) (int, *net.UDPAddr, error) {
 	//nexusConn.SetReadDeadline(time.Now().Add(10 * time.Second)) // Set a deadline for reading
-	n, addr, err := p.conn.ReadFromUDP(buffer)
+	n, addr, err := p.Conn.ReadFromUDP(buffer)
 	if err != nil {
 		fmt.Println("Error receiving Peer info:", err)
 		return 0, nil, err
