@@ -80,7 +80,6 @@ func (p *Peer) DownloadFile(messageChannel chan<- Message) {
 			panic(err)
 		}
 		messageChannel <- msg
-		fmt.Println("msg.Payload: ", string(msg.Payload))
 		buffer.Reset()
 	}
 }

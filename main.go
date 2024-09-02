@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/gustavopcr/p2p/internal/rendezvous"
 	"github.com/gustavopcr/p2p/peer"
@@ -22,9 +21,9 @@ func main() {
 	go p.SendMessages(sendChannel)
 	go p.DownloadFile(messageChannel)
 	p.UploadFile("alo.txt", sendChannel)
-	time.Sleep(time.Second * 5)
 	fmt.Println("time.sleep...")
 	p.UploadFile("ola.txt", sendChannel)
-
-	select {}
+	for msg := range messageChannel {
+		fmt.Println("msg.Payload: ", string(msg.Payload))
+	}
 }
