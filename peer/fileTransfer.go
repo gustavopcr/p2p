@@ -7,11 +7,15 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/google/uuid"
 )
 
 type Message struct {
+	FileID         uuid.UUID
 	MessageType    int
 	SequenceNumber int
+	Offset         int
 	Payload        []byte
 }
 
@@ -42,13 +46,25 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 
 	r := bufio.NewReader(f)
 	tmpBuffer := make([]byte, 1024)
+
+	fileId := uuid.New()
+	offset := 0
 	for { // lendo arquivo
 		var buffer bytes.Buffer
 		encoder := gob.NewEncoder(&buffer)
 		n, err := r.Read(tmpBuffer)
 		if err != nil {
 			if err == io.EOF {
-				message := Message{MessageType: 1, SequenceNumber: 0, Payload: tmpBuffer[:n]}
+				/*
+					type Message struct {
+						MessageType    int
+						SequenceNumber int
+						Offset         uint64
+						FileID         uuid.UUID
+						Payload        []byte
+					}
+				*/
+				message := Message{FileID: fileId, MessageType: 1, SequenceNumber: 0, Offset: offset, Payload: tmpBuffer[:n]}
 				err = encoder.Encode(message)
 				if err != nil {
 					fmt.Println("Error encoding struct:", err)
@@ -59,7 +75,7 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 			}
 			panic(err)
 		}
-		message := Message{MessageType: 0, SequenceNumber: 1, Payload: tmpBuffer[:n]}
+		message := Message{FileID: fileId, MessageType: 1, SequenceNumber: 0, Offset: offset, Payload: tmpBuffer[:n]}
 		err = encoder.Encode(message)
 		if err != nil {
 			fmt.Println("Error encoding struct:", err)
