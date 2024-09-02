@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/gustavopcr/p2p/internal/file"
 )
 
 type Message struct {
@@ -32,8 +33,13 @@ func (p *Peer) SendMessages(sendChannel <-chan []byte) {
 }
 
 func (p *Peer) HandleMessages(messageChannel <-chan Message) {
+	f, err := file.NewFileManager("testando.txt")
+	if err != nil {
+		panic(err)
+	}
 	for msg := range messageChannel {
-		fmt.Println("msg.Payload: ", string(msg.Payload))
+		f.File.WriteAt(msg.Payload, msg.Offset)
+		//fmt.Println("msg.Payload: ", string(msg.Payload))
 	}
 }
 

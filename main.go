@@ -19,7 +19,6 @@ func main() {
 	go p.HandleMessages(messageChannel)
 
 	p.UploadFile("alo.txt", sendChannel)
-	p.UploadFile("ola.txt", sendChannel)
 
 	select {}
 }
