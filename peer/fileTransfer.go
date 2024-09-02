@@ -28,9 +28,6 @@ func (p *Peer) SendMessages(sendChannel <-chan []byte) {
 }
 
 func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
-	var buffer bytes.Buffer
-	encoder := gob.NewEncoder(&buffer)
-
 	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -40,6 +37,8 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 	r := bufio.NewReader(f)
 	tmpBuffer := make([]byte, 1024)
 	for { // lendo arquivo
+		var buffer bytes.Buffer
+		encoder := gob.NewEncoder(&buffer)
 		n, err := r.Read(tmpBuffer)
 		if err != nil {
 			if err == io.EOF {
@@ -50,7 +49,6 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 					panic(err)
 				}
 				sendChannel <- buffer.Bytes()
-				buffer.Reset()
 				break
 			}
 			panic(err)
@@ -62,21 +60,27 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 			return
 		}
 		sendChannel <- buffer.Bytes()
-		buffer.Reset()
 	}
 
 }
 
-func (p *Peer) DownloadFile(receiveChannel chan<- []byte) {
-	var buffer bytes.Buffer
+func (p *Peer) DownloadFile(messageChannel chan<- Message) {
 	tmpBuffer := make([]byte, 1024)
 	for {
+		var buffer bytes.Buffer
+		decoder := gob.NewDecoder(&buffer)
 		n, _, err := p.ReadData(tmpBuffer)
 		if err != nil {
 			panic(err)
 		}
 		buffer.Write(tmpBuffer[:n])
-		receiveChannel <- buffer.Bytes()
+		var msg Message
+		err = decoder.Decode(&msg)
+		if err != nil {
+			panic(err)
+		}
+		messageChannel <- msg
+		fmt.Println("msg.Payload: ", string(msg.Payload))
 		buffer.Reset()
 	}
 }
