@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"github.com/google/uuid"
@@ -34,12 +35,18 @@ func (p *Peer) SendMessages(sendChannel <-chan []byte) {
 
 func (p *Peer) HandleMessages(messageChannel <-chan Message) {
 	f, err := file.NewFileManager("testando.txt")
+	defer func() {
+		if err := f.File.Close(); err != nil {
+			log.Printf("Error while closing file: %v", err)
+		}
+	}()
+
 	if err != nil {
 		panic(err)
 	}
 	for msg := range messageChannel {
 		f.File.WriteAt(msg.Payload, msg.Offset)
-		//fmt.Println("msg.Payload: ", string(msg.Payload))
+		fmt.Println("msg.Payload: ", string(msg.Payload))
 	}
 }
 

@@ -17,7 +17,3 @@ func NewFileManager(filePath string) (*FileManager, error) {
 
 	return &FileManager{File: file}, nil
 }
-
-func (fm *FileManager) Close() {
-	fm.File.Close()
-}
