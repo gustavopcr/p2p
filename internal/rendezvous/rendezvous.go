@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/gustavopcr/p2p/constants"
 	"github.com/gustavopcr/p2p/peer"
 )
 
@@ -20,7 +21,7 @@ func requestRendezvous(p *peer.Peer) error {
 
 func addPeer(p *peer.Peer) error {
 	//nexusConn.SetReadDeadline(time.Now().Add(10 * time.Second)) // Set a deadline for reading
-	tmpBuffer := make([]byte, 1472)
+	tmpBuffer := make([]byte, constants.BufferSize)
 	n, _, err := p.ReadData(tmpBuffer)
 	if err != nil {
 		fmt.Println("Error receiving peer info:", err)

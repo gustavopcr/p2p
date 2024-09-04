@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/gustavopcr/p2p/constants"
 	"github.com/gustavopcr/p2p/internal/file"
 )
 
@@ -72,7 +73,7 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 	defer f.Close()
 
 	r := bufio.NewReader(f)
-	tmpBuffer := make([]byte, 1472)
+	tmpBuffer := make([]byte, constants.BufferSize)
 
 	fileId := uuid.New()
 	offset := int64(0)
@@ -107,7 +108,7 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 }
 
 func (p *Peer) DownloadFile(messageChannel chan<- Message) {
-	tmpBuffer := make([]byte, 1472)
+	tmpBuffer := make([]byte, constants.BufferSize)
 
 	for {
 		var buffer bytes.Buffer
