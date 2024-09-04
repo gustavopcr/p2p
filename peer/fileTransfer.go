@@ -14,6 +14,12 @@ import (
 	"github.com/gustavopcr/p2p/internal/file"
 )
 
+const (
+	messageInit    = 0
+	messagePayload = 1
+	messageEOF     = 2
+)
+
 type Message struct {
 	FileID         uuid.UUID
 	MessageType    int
@@ -83,7 +89,7 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 		n, err := r.Read(tmpBuffer)
 		if err != nil {
 			if err == io.EOF {
-				message := Message{FileID: fileId, MessageType: 1, SequenceNumber: 0, Offset: offset, Payload: tmpBuffer[:n]}
+				message := Message{FileID: fileId, MessageType: messageEOF, SequenceNumber: 0, Offset: offset, Payload: tmpBuffer[:n]}
 				err = encoder.Encode(message)
 				if err != nil {
 					fmt.Println("Error encoding struct:", err)
@@ -95,7 +101,7 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 			}
 			panic(err)
 		}
-		message := Message{FileID: fileId, MessageType: 1, SequenceNumber: 0, Offset: offset, Payload: tmpBuffer[:n]}
+		message := Message{FileID: fileId, MessageType: messagePayload, SequenceNumber: 0, Offset: offset, Payload: tmpBuffer[:n]}
 		err = encoder.Encode(message)
 		if err != nil {
 			fmt.Println("Error encoding struct:", err)
@@ -103,7 +109,7 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 		}
 		sendChannel <- buffer.Bytes()
 		buffer.Reset()
-		offset += int64(n + 1)
+		offset += int64(n)
 	}
 }
 
