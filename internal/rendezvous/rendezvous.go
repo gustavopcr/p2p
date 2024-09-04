@@ -20,7 +20,7 @@ func requestRendezvous(p *peer.Peer) error {
 
 func addPeer(p *peer.Peer) error {
 	//nexusConn.SetReadDeadline(time.Now().Add(10 * time.Second)) // Set a deadline for reading
-	tmpBuffer := make([]byte, 1024)
+	tmpBuffer := make([]byte, 1472)
 	n, _, err := p.ReadData(tmpBuffer)
 	if err != nil {
 		fmt.Println("Error receiving peer info:", err)
