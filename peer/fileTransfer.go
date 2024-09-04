@@ -79,7 +79,7 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 	defer f.Close()
 
 	r := bufio.NewReader(f)
-	tmpBuffer := make([]byte, constants.BufferSize)
+	tmpBuffer := make([]byte, 1000) // set size as 1000 to avoid encode/decode bug, malformed struct due to ignoring struct header size
 
 	fileId := uuid.New()
 	offset := int64(0)
