@@ -2,8 +2,6 @@ package peer
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"io"
 	"os"
@@ -11,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gustavopcr/p2p/constants"
 	"github.com/gustavopcr/p2p/internal/file"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -18,14 +17,6 @@ const (
 	messagePayload = 1
 	messageEOF     = 2
 )
-
-type Message struct {
-	FileID         uuid.UUID
-	MessageType    int
-	SequenceNumber int
-	Offset         int64
-	Payload        []byte
-}
 
 func (p *Peer) SendMessages(sendChannel <-chan []byte) {
 	for data := range sendChannel {
@@ -40,8 +31,8 @@ func (p *Peer) SendMessages(sendChannel <-chan []byte) {
 	}
 }
 
-func (p *Peer) HandleMessages(messageChannel <-chan Message) {
-	m := make(map[uuid.UUID]*file.FileManager)
+func (p *Peer) HandleMessages(messageChannel <-chan *Packet) {
+	m := make(map[string]*file.FileManager)
 
 	for msg := range messageChannel {
 		switch msg.MessageType {
@@ -51,18 +42,18 @@ func (p *Peer) HandleMessages(messageChannel <-chan Message) {
 			if err != nil {
 				panic(err)
 			}
-			m[msg.FileID] = f
+			m[msg.FileId] = f
 		case messagePayload:
 			fmt.Println("Payload")
-			m[msg.FileID].File.WriteAt(msg.Payload, msg.Offset)
+			m[msg.FileId].File.WriteAt(msg.Payload, msg.Offset)
 		case messageEOF:
 			fmt.Println("EOF")
-			if m[msg.FileID] != nil && m[msg.FileID].File != nil {
-				err := m[msg.FileID].File.Close()
+			if m[msg.FileId] != nil && m[msg.FileId].File != nil {
+				err := m[msg.FileId].File.Close()
 				if err != nil {
 					panic(err)
 				}
-				delete(m, msg.FileID)
+				delete(m, msg.FileId)
 			}
 		}
 	}
@@ -82,74 +73,57 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 	offset := int64(0)
 
 	func() {
-		var buffer bytes.Buffer
-		encoder := gob.NewEncoder(&buffer)
-		message := Message{FileID: fileId, MessageType: messageInit, SequenceNumber: 0, Offset: offset, Payload: []byte(fmt.Sprintf("p2p_%s", filename))}
-		err = encoder.Encode(message)
+
+		message := &Packet{FileId: fileId.String(), MessageType: messageInit, SequenceNumber: 0, Offset: offset, Payload: []byte(fmt.Sprintf("p2p_%s", filename))}
+		msgBytes, err := proto.Marshal(message)
 		if err != nil {
-			fmt.Println("Error encoding struct:", err)
 			panic(err)
 		}
-		sendChannel <- buffer.Bytes()
+		sendChannel <- msgBytes
 	}()
 
-	for { // lendo arquivo
-		var buffer bytes.Buffer
-		encoder := gob.NewEncoder(&buffer)
+	for { // reading file
 		n, err := r.Read(tmpBuffer)
 		if err != nil {
 			if err == io.EOF {
-				message := Message{FileID: fileId, MessageType: messageEOF, SequenceNumber: 0, Offset: offset, Payload: tmpBuffer[:n]}
-				err = encoder.Encode(message)
+				message := &Packet{FileId: fileId.String(), MessageType: messageEOF, SequenceNumber: 0, Offset: offset, Payload: tmpBuffer[:n]}
+				msgBytes, err := proto.Marshal(message)
 				if err != nil {
-					fmt.Println("Error encoding struct:", err)
 					panic(err)
 				}
-				sendChannel <- buffer.Bytes()
-				offset += int64(n + 1)
+				sendChannel <- msgBytes
 				break
 			}
 			panic(err)
 		}
-		message := Message{FileID: fileId, MessageType: messagePayload, SequenceNumber: 0, Offset: offset, Payload: tmpBuffer[:n]}
-		err = encoder.Encode(message)
+		message := &Packet{FileId: fileId.String(), MessageType: messagePayload, SequenceNumber: 0, Offset: offset, Payload: tmpBuffer[:n]}
+		msgBytes, err := proto.Marshal(message)
 		if err != nil {
-			fmt.Println("Error encoding struct:", err)
-			return
+			panic(err)
 		}
-		sendChannel <- buffer.Bytes()
-		buffer.Reset()
+		sendChannel <- msgBytes
 		offset += int64(n)
 	}
 }
 
-func (p *Peer) DownloadFile(messageChannel chan<- Message) {
-
-	tmpBuffer := make([]byte, constants.BufferSize)
-
+func (p *Peer) DownloadFile(messageChannel chan<- *Packet) {
 	for {
-		var buffer bytes.Buffer
-		decoder := gob.NewDecoder(&buffer)
-		n, _, err := p.ReadData(tmpBuffer)
-		if err != nil {
-			if err == io.EOF {
-				continue
-			}
-			panic(err)
-		}
 
-		_, err = buffer.Write(tmpBuffer[:n])
-		if err != nil {
-			fmt.Println("Error writing to buffer:", err)
-			panic(err)
+		tmpBuffer := make([]byte, constants.BufferSize)
+
+		for {
+			_, _, err := p.ReadData(tmpBuffer)
+			if err != nil {
+				if err == io.EOF {
+					continue
+				}
+				panic(err)
+			}
+			message := &Packet{}
+			if err := proto.Unmarshal(tmpBuffer, message); err != nil {
+				panic(err)
+			}
+			messageChannel <- message
 		}
-		var msg Message
-		err = decoder.Decode(&msg)
-		if err != nil {
-			fmt.Println("err: ", err)
-			panic(err)
-		}
-		messageChannel <- msg
-		buffer.Reset()
 	}
 }

@@ -14,7 +14,7 @@ func main() {
 	p := rendezvous.ConnectToPeers("localhost:8080")
 
 	sendChannel := make(chan []byte, 10)
-	messageChannel := make(chan peer.Message, 10)
+	messageChannel := make(chan *peer.Packet, 10)
 
 	defer close(sendChannel)
 	defer close(messageChannel)
