@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package p2p;
+
+option go_package = "github.com/gustavopcr/p2p/peer";
+message ProtoMessage {
+	string fileId = 1;
+	int32 messageType = 2;
+	int32 sequenceNumber = 3;
+	int64 offset = 4;
+	bytes payload  = 5;
+}
