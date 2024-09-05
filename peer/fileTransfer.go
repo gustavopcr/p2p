@@ -68,6 +68,7 @@ func (p *Peer) HandleMessages(messageChannel <-chan Message) {
 		//se EOF feche o FileManager
 		switch msg.MessageType {
 		case messageInit:
+			fmt.Println("init: ", string(msg.Payload))
 			f, err := file.NewFileManager(string(msg.Payload))
 			if err != nil {
 				panic(err)
@@ -76,7 +77,7 @@ func (p *Peer) HandleMessages(messageChannel <-chan Message) {
 		case messagePayload:
 			fmt.Println("payload: ", msg.Payload)
 		case messageEOF:
-			fmt.Println("EOF: ", msg.Payload)
+			fmt.Println("EOF")
 
 			if m[msg.FileID] != nil {
 				err := m[msg.FileID].File.Close()
@@ -111,6 +112,19 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 
 	fileId := uuid.New()
 	offset := int64(0)
+
+	func() {
+		var buffer bytes.Buffer
+		encoder := gob.NewEncoder(&buffer)
+		message := Message{FileID: fileId, MessageType: messageInit, SequenceNumber: 0, Offset: offset, Payload: []byte(fmt.Sprintf("p2p_%s", filename))}
+		err = encoder.Encode(message)
+		if err != nil {
+			fmt.Println("Error encoding struct:", err)
+			panic(err)
+		}
+		sendChannel <- buffer.Bytes()
+	}()
+
 	for { // lendo arquivo
 		var buffer bytes.Buffer
 		encoder := gob.NewEncoder(&buffer)
@@ -142,6 +156,7 @@ func (p *Peer) UploadFile(filename string, sendChannel chan<- []byte) {
 }
 
 func (p *Peer) DownloadFile(messageChannel chan<- Message) {
+
 	tmpBuffer := make([]byte, constants.BufferSize)
 
 	for {
@@ -155,7 +170,11 @@ func (p *Peer) DownloadFile(messageChannel chan<- Message) {
 			panic(err)
 		}
 
-		buffer.Write(tmpBuffer[:n])
+		_, err = buffer.Write(tmpBuffer[:n])
+		if err != nil {
+			fmt.Println("Error writing to buffer:", err)
+			panic(err)
+		}
 		var msg Message
 		err = decoder.Decode(&msg)
 		if err != nil {
