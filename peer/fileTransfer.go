@@ -41,45 +41,23 @@ func (p *Peer) SendMessages(sendChannel <-chan []byte) {
 }
 
 func (p *Peer) HandleMessages(messageChannel <-chan Message) {
-	/*
-		f, err := file.NewFileManager("testando.txt")
-		defer func() {
-			if err := f.File.Close(); err != nil {
-				log.Printf("Error while closing file: %v", err)
-			}
-		}()
-
-		if err != nil {
-			panic(err)
-		}
-	*/
 	m := make(map[uuid.UUID]*file.FileManager)
 
 	for msg := range messageChannel {
-		/*
-			FileID         uuid.UUID
-			MessageType    int
-			SequenceNumber int
-			Offset         int64
-			Payload        []byte
-		*/
-		//se mensagem inicial, envia filename
-		//se payload, verifica se existe FileManager. se sim: escreva no arquivo, senao: crie e escreva no arquivo
-		//se EOF feche o FileManager
 		switch msg.MessageType {
 		case messageInit:
-			fmt.Println("init: ", string(msg.Payload))
+			fmt.Println("Init")
 			f, err := file.NewFileManager(string(msg.Payload))
 			if err != nil {
 				panic(err)
 			}
 			m[msg.FileID] = f
 		case messagePayload:
-			fmt.Println("payload: ", msg.Payload)
+			fmt.Println("Payload")
+			m[msg.FileID].File.WriteAt(msg.Payload, msg.Offset)
 		case messageEOF:
 			fmt.Println("EOF")
-
-			if m[msg.FileID] != nil {
+			if m[msg.FileID] != nil && m[msg.FileID].File != nil {
 				err := m[msg.FileID].File.Close()
 				if err != nil {
 					panic(err)
@@ -87,16 +65,6 @@ func (p *Peer) HandleMessages(messageChannel <-chan Message) {
 				delete(m, msg.FileID)
 			}
 		}
-		/*
-			f.File.WriteAt(msg.Payload, msg.Offset)
-			fmt.Println("msg: {")
-			fmt.Println("msg.FileID: ", msg.FileID)
-			fmt.Println("msg.MessageType: ", msg.MessageType)
-			fmt.Println("msg.SequenceNumber: ", msg.SequenceNumber)
-			fmt.Println("msg.Offset: ", msg.Offset)
-			fmt.Println("msg.Payload: ", string(msg.Payload))
-			fmt.Println("}")
-		*/
 	}
 }
 
