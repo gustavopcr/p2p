@@ -6,7 +6,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/google/uuid"
@@ -42,16 +41,20 @@ func (p *Peer) SendMessages(sendChannel <-chan []byte) {
 }
 
 func (p *Peer) HandleMessages(messageChannel <-chan Message) {
-	f, err := file.NewFileManager("testando.txt")
-	defer func() {
-		if err := f.File.Close(); err != nil {
-			log.Printf("Error while closing file: %v", err)
-		}
-	}()
+	/*
+		f, err := file.NewFileManager("testando.txt")
+		defer func() {
+			if err := f.File.Close(); err != nil {
+				log.Printf("Error while closing file: %v", err)
+			}
+		}()
 
-	if err != nil {
-		panic(err)
-	}
+		if err != nil {
+			panic(err)
+		}
+	*/
+	m := make(map[uuid.UUID]*file.FileManager)
+
 	for msg := range messageChannel {
 		/*
 			FileID         uuid.UUID
@@ -60,14 +63,39 @@ func (p *Peer) HandleMessages(messageChannel <-chan Message) {
 			Offset         int64
 			Payload        []byte
 		*/
-		f.File.WriteAt(msg.Payload, msg.Offset)
-		fmt.Println("msg: {")
-		fmt.Println("msg.FileID: ", msg.FileID)
-		fmt.Println("msg.MessageType: ", msg.MessageType)
-		fmt.Println("msg.SequenceNumber: ", msg.SequenceNumber)
-		fmt.Println("msg.Offset: ", msg.Offset)
-		fmt.Println("msg.Payload: ", string(msg.Payload))
-		fmt.Println("}")
+		//se mensagem inicial, envia filename
+		//se payload, verifica se existe FileManager. se sim: escreva no arquivo, senao: crie e escreva no arquivo
+		//se EOF feche o FileManager
+		switch msg.MessageType {
+		case messageInit:
+			f, err := file.NewFileManager(string(msg.Payload))
+			if err != nil {
+				panic(err)
+			}
+			m[msg.FileID] = f
+		case messagePayload:
+			fmt.Println("payload: ", msg.Payload)
+		case messageEOF:
+			fmt.Println("EOF: ", msg.Payload)
+
+			if m[msg.FileID] != nil {
+				err := m[msg.FileID].File.Close()
+				if err != nil {
+					panic(err)
+				}
+				delete(m, msg.FileID)
+			}
+		}
+		/*
+			f.File.WriteAt(msg.Payload, msg.Offset)
+			fmt.Println("msg: {")
+			fmt.Println("msg.FileID: ", msg.FileID)
+			fmt.Println("msg.MessageType: ", msg.MessageType)
+			fmt.Println("msg.SequenceNumber: ", msg.SequenceNumber)
+			fmt.Println("msg.Offset: ", msg.Offset)
+			fmt.Println("msg.Payload: ", string(msg.Payload))
+			fmt.Println("}")
+		*/
 	}
 }
 
