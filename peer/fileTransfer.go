@@ -112,7 +112,7 @@ func (p *Peer) DownloadFile(messageChannel chan<- *Packet) {
 		tmpBuffer := make([]byte, constants.BufferSize)
 
 		for {
-			_, _, err := p.ReadData(tmpBuffer)
+			n, _, err := p.ReadData(tmpBuffer)
 			if err != nil {
 				if err == io.EOF {
 					continue
@@ -120,9 +120,10 @@ func (p *Peer) DownloadFile(messageChannel chan<- *Packet) {
 				panic(err)
 			}
 			message := &Packet{}
-			if err := proto.Unmarshal(tmpBuffer, message); err != nil {
+			if err := proto.Unmarshal(tmpBuffer[:n], message); err != nil {
 				panic(err)
 			}
+			fmt.Println("message: ", message)
 			messageChannel <- message
 		}
 	}
